@@ -1,0 +1,321 @@
+Validate
+
+A Matlab script for human-assisted/corrected component labeling
+
+JFM   8/15/2006
+Rev:  8/7/2007
+
+
+
+--- Usage
+
+[valid_comp] = Validate(valid_filename, comp_thresh_filename);
+    Starts the GUI to allow human-assisted merging and splitting
+    given components at various thresholds.  If you have a large
+    monitor (>1900 pixels wide) or dual monitors, the 2d plots
+    and 3d window will be shown next to each other, otherwise,
+    they will alternate being displayed.
+
+Example:
+
+[retina1_valid_comp] = Validate('retina1_valid.mat', 'retina1_viren5.mat');
+
+--- Inputs
+
+valid_filename - Filename of a validation file set to load, if it
+    doesn't exist, create one.  Saves are made to the same file.
+    The same valid_filename can be used with different sets of
+    comp_thresh_filenames, so that components from different networks
+    can all be added to the same validation set.
+
+comp_thresh_filename - Filename of .mat file with network output components
+    at various levels of threshold (there should be some ordering
+    too, to indicate which levels are higher than others, to be
+    used for merging and splitting.  Created by CreateCompThresh.
+
+    compXX - components at threshold XX
+    im - sem image
+    thresholds - vector of thresholds
+
+--- Outputs
+
+valid_comp - Set of validation components
+
+[Also saves valid.mat file]
+
+
+
+--- Interface
+
+Left 2d component view
+    2d view of the currently selected components in the list.
+    (selectable, each view type can be turned on or off.)
+
+Right 2d component view
+    All the components at the current threshold or the set
+    of valid components.
+
+3d component view
+    Rotate/move with either keyboard (see below) or with toolbar
+    buttons
+
+Component list
+    List of selected components, sizes and z locations, with color
+    corresponding to the
+
+Keyboard Commands
+    Up - Go to next section
+    Down - Go to previous section
+    Left - View components at the next lower threshold
+    Right - View components at the next higher threshold
+    PageUp or q - Up 10 sections
+    PageDown or a - Down 10 sections
+    [ - Decrement the last component in the list by 1 (in same thresh)
+    ] - Increment the last component in the list by 1 (in same thresh)
+
+    F4 - Toggle component view in left 2d plot
+    F5 - Toggle image view in left 2d plot
+    F6 - Toggle component view in right 2d plot
+    F7 - Toggle image view in right 2d plot
+    F8 - Switch between displayed currently selected
+         components and the valid components.
+    F9 - Toggle display of problem areas
+
+
+     i
+    j k  - Rotate 3d view
+     m
+
+     r
+    d f  - Move 3d view
+     c
+
+    w - Zoom in 3d view
+    s - Zoom out 3d view
+
+    Esc - Quits
+
+    [Should have a way to enter the component number to view, text
+    box with comp #, this box also changes when a component is
+    clicked on without being in Add mode.]
+
+
+--- Actions/Buttons
+
+
+    Add - Puts the program into 'Add' mode, so that the next click
+        into the 2d plot window will add that component to the current
+        list of components in the text window.  After click in 2d,
+        checks to see if the component has already been added,
+        and checks overlap with already selected components, and
+        check with valid_comp.
+
+    Delete - Puts program into 'Delete' mode, where the next click
+        in the 2d plot or component list will remove the clicked component
+        from the component list.
+
+    Problem Area - Puts the program into 'Problem Area' mode, where clicks
+        in the 2d plots add a red '+' to the display to indicate a
+        difficult to segment area.   The display of these areas can
+        be toggled with F9.
+
+    Delete All - Clears all the components from the list.
+
+    Accept - Add (merges) the component selected in list as the next
+        valid component (valid_comp).  The valid_info struct includes
+        the stack and original component number that each piece came
+        from.
+
+    Reject -
+
+    Cell type - Drop down list to select a classification for the
+        currently selected components, which is stored in the
+        valid_info struct once the component is 'Accepted.
+
+    Find - Find the selected component numbers in the current threshold
+        (more than one component can be typed).  If the comp number is
+        larger that the highest component, the highest component is
+        selected.
+
+    If move on:
+        Add this component to skipped_list
+        Set current_component = next largest component at thresh
+
+Heuristics for splitting and merging components:
+
+    Split Section - Suggest splits for the selected components
+        based on the current 2d section (fast).  The algorithm
+        looks at each component individually, and if it can be
+        split into 2 or more components at a higher level of threshold,
+        these components are added to the list.  The algorithm
+        stops as soon as it finds one merge, so it can be run
+        multiple times over the same set of components, and will
+        continue to find all the splits possible (given the
+        current section).
+
+    Split All - Suggest splits based on the whole volume of the
+        selected components, based on SuggestSplits().
+
+    Merges Fast - Finds nearby components in the valid set based
+        on the bounding box of the currently selected components.  Assumes
+        that the user has gone through the components in order from
+        largest to smallest, and so by the time fragments are considered,
+        a large library of components to merge with are already in
+        the valid set.  Works best for a single small component
+
+        [Mergers also could be suggested by using components from
+        lower thresholds, like SuggestSplits]
+
+    Merges - Valentin's vector field algorithm.
+
+
+
+[Another choice for chosing the components to cycle through is ones
+that might connect to the current one, once the most likely
+connections have been exhausted, then we can move on to the next
+smallest component.  The idea would be to minimize the amount of
+human task-switching between components.]
+
+
+--- Helper functions
+
+Creating the input files:
+
+CreateCompThresh(comp_filename, comp_thresh_filename, thresholds)
+    Create file for use as input to Validate.m.  Assumes the components
+    have already been generated at various thresholds.
+
+
+CreateCompThreshConn(conn, im, thresholds, comp_thresh_filename)
+    Create file for use as input to Validate.m from a 3-connectivity
+    output.   Creates components at various thresholds.
+
+
+
+---- Bugs/Known Issues
+
+Issue:
+Clicking on the toolbar in the 3d plot (like rotate, zoom, etc)
+changes the window style to non-modal, which means that
+repeated keypresses get sent to the Matlab command window
+instead of the Validate GUI, and commands are ignored.
+
+Workaround:
+Deselect the tool on the toolbar before pressing any of the
+keyboard commands.
+
+
+
+--- Important data structures
+
+state. - Struct with all the information about the current state of
+    the GUI.
+
+    n_cur_comp = The component numbers of the currently selected components
+        that are being considered for a merge into the valid set.
+
+    n_cur_thresh = Threshold number of each component # in n_cur_comp
+
+
+state.reject{} -
+    List of sets of components that are not valid, if these are selected
+    again for merging, they will not be accepted.  This list is checked
+    by FindMerges() to see if a pair of components should be suggested.
+
+    If a set of components contains a subset of the components on the
+    reject list, that set will not be allowed.  Suppose that we pass
+    a set of components S = [ 56 72 73 ] and the reject list contains:
+    reject_info{n}.n_comp = [ 72 73 ], then S will not be allowed.
+
+
+
+--- File structure/data structure for Validated Components (valid.mat)
+
+Matlab file with structs describing how to create each of the
+components in valid_comp from the compXX
+
+valid_info (struct) - List of valid components (what components were merged
+    to create them:  filename, threshold level and component number).
+    Every valid component will essentially be a merger of one or
+    more components from the same or different component sets.
+
+    component_num - Component number in valid_comp
+    cell_type - Glia/axons/dendrite/unknown/body? Maybe easiest
+        to have only two choices:  "axon/dendrite process" and "other (glia)"
+    min_yxz - Min Y,X,Z of bounding box
+    max_yxz - Max Y,X,Z of bounding box
+
+    constituents (struct for each comp in this valid_comp)
+        {n}.filename -
+        {n}.threshold -
+        {n}.comp_num - Comp number in threshold stack.
+
+valid_comp - Current valid components.
+    Maybe would also like to visualize mergers and splits given
+    a true valid set (e.g., from human labeler or other means)
+    even if we don't have comp_struct for every component.
+
+skipped_comp - Components that have been examined but skipped (not
+    added to valid_comp.
+
+problem_area(z).location{n} - (Struct array, z slice, n number of problem
+    areas in z), location is a 3-vector [y x z].
+
+
+--- File structure for input components (comp_thresh.mat)
+
+comp95, comp96, ..., comp995 - Components at various threshold levels
+    (highest threshold last) sorted by component size (or we
+    can find component sizes later?).
+
+threshold - Vector with the threshold level used to create each
+    component set.
+
+
+
+--- Help with Matlab GUI programming
+
+Making buttons the proper size on different OSes.
+
+http://www-ccs.ucsd.edu/matlab/techdoc/newfeat/nfg_hg_gui.html
+
+    For documentation on Matlab's 3d plotting see:
+        Axes Properties
+
+
+To kill GUI windows when there are errors in the callbacks:
+
+delete(1); delete(2); delete(3);
+
+
+The callback functions are validate are all nested functions, meaning
+they have access to (and can modify) variables in the workspace
+of their parent function.  This means that care has to be taken
+inside the callbacks to avoid overwriting variables, and so
+probably some functions like FindMerges should not be nested
+functions but defined outside the main function of Validate.
+
+--- To do list
+
+Alpha blend of components overlaid with images
+
+Integrate Valentin's merge routine
+
+View orthogonal directions
+
+Pan/zoom over larger images.  (Integrate HDF large file format support?)
+
+Paint tools.  Draw/erase to join and merge components.  Have to think
+about how this will impact the rest of the code.  Our design now
+assumes that the objects will be static (give a particular threshold
+level, the component numbers won't change).
+
+it might be nice to add a feature to Validate where an explicit
+component file could be designated as a labeling which could be at
+times compared against both the thresholded segmentations and the
+current validated stack. i've sorta been doing this by just having a
+dummy .99 thresholding which is actually the labeling.
+
+Improved Find, select cell types
+
+2d plane/crosshairs view of current section in the 3d window

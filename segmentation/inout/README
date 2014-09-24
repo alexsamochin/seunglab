@@ -1,0 +1,3 @@
+mincut - ising model for in/out segmentation
+adjacency_list - original code by Boykov et al to find mincut/maxflow in near linear time, plus a MATLAB mex wrapper for it.
+

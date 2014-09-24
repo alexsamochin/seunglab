@@ -1,0 +1,68 @@
+this directory contains training and inference algorithms for in/out
+segmentation of OPL data:
+
+there are two models: MRF and CRF
+MRF:
+P(x) = 1/Z* exp \sum_ij J_ij x_i x_j + \sum_i x_i b
+P(y_i|x_i) = \sum_i \sum_v={-1,1} \delta(x_i,v)*
+             exp(-(y_i-m_v)/2\sigma_v^2)*normalize
+
+parameters are:
+J_ij 		kernel (5x5x5)
+b 		bias
+mu_v,sigma_v 	estimated from data
+
+CRF:
+P(y_i|x_i) = exp \sum_ij J_ij x_i x_j + \sum_i x_i*(I_i-theta)
+ 
+parameters are:
+J_ij		kernel (5x5x5)
+theta		threshold trained 
+
+
+CRF was trained discrimitatively
+\delta J_ij = <s_i s_j>_Pempirical - <s_i s_j>_P(J_ij,theta,T=0)
+the zero temp limit is the optimum and is found by graph cut.
+graphcut is proven to work only on nonnegative weights J_ij, so we trained
+constrained J_ijs (nonnegative)
+
+MRF was trained with pseudolikelihood for the prior P(x) only using the tracing.
+the parameters for P(y|x) were estimated from the training data.
+
+
+training
+CRF:
+with graphcuts, J_ijs and theta, C=constrained nonnegative J_ijs
+trainCRFtheta.m
+trainCRFthetaC.m	-- used in ICCV paper
+
+with contrastive divergence and pseudolikelihood
+trainCRFCD.m
+trainCRFPL.m
+
+tried CRF with mixed gaussian noise model, like MRF, didn't converge
+trainCRF.m
+
+MRF:
+with pseudolikelihood
+trainMRFPL.m		-- used in ICCV paper
+
+with contrastive divergence
+trainMRFCD.m
+
+
+inference:
+
+for the CRF threshold noise model:
+findMAPthetacut.m
+findMAPthetacutbig.m 	-- use this if the data is too big (i.e. > ~2 mpixel)
+findMAPthetaanneal.m
+
+
+for the MRF 
+findMAPcut.m
+findMAPcutbig.m
+findMAPanneal.m
+
+
+results are in /net/data/fin/opl/

@@ -1,0 +1,29 @@
+function [cmpHi,z] = interpZ(cmpLo,fac)
+
+disp('Interpolating...')
+
+z = 1:(1/fac):size(cmpLo,3);
+[xx,yy,zz] = meshgrid(single(1:size(cmpLo,2)),single(1:size(cmpLo,1)),single(z));
+cmpHi = zeros(size(xx),'uint16');
+cmpIdx = unique(cmpLo);
+% nPix = zeros(length(cmpIdx),2,'single');
+
+for idx = 1:length(cmpIdx),
+	
+	cmpIdx(idx)
+	
+	if(cmpIdx(idx)~=0)
+		cmp = cmpLo == cmpIdx(idx);
+		d = zeros(size(cmpLo),'single');
+		for k = 1:size(cmpLo,3),
+			d(:,:,k) = bwdist(cmp(:,:,k))-bwdist(~cmp(:,:,k));
+		end
+		d(isinf(d))=1e31;
+		dd = interp3(d,xx,yy,zz);
+		cmpHi(dd<=0) = cmpIdx(idx);
+		% 	nPix(idx,:) = [sum(cmp(:)) sum(dd(:)<=0)];
+		%   nPix(idx,:)
+		% 	if nPix(idx,2) == 0, keyboard, end
+	end
+	
+end
